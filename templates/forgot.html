@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Reset password{% endblock %}
+{% block body %}
+<div id="s1">
+  <h1 class="text-2xl font-bold text-slate-800 mb-2">Forgot password?</h1>
+  <p class="text-slate-500 mb-6">Enter your email and we'll send a reset code.</p>
+  <form id="a" class="space-y-4">
+    <input class="inp" type="email" id="email" placeholder="Email address" autocomplete="email" required>
+    <button class="btn" type="submit">Send code</button>
+  </form>
+</div>
+<div id="s2" class="hidden">
+  <h1 class="text-2xl font-bold text-slate-800 mb-2">New password</h1>
+  <p class="text-slate-500 mb-6">Enter the code from your email and choose a new password.</p>
+  <form id="b" class="space-y-4">
+    <input class="inp text-center text-2xl tracking-[0.5em] font-bold" id="otp" maxlength="6" inputmode="numeric"
+           autocomplete="one-time-code" placeholder="••••••" required>
+    <input class="inp" type="password" id="pw" placeholder="New password (min 8 characters)" minlength="8" autocomplete="new-password" required>
+    <button class="btn" type="submit">Update password</button>
+  </form>
+</div>
+<p id="msg"></p>
+<p class="mt-4 text-center"><a href="/login" class="text-sm text-slate-500 hover:text-blue-600">← Back to sign in</a></p>
+{% endblock %}
+{% block scripts %}
+<script>
+let mail = '';
+a.onsubmit = async e => {
+  e.preventDefault(); const btn = a.querySelector('button'); busy(btn, true, 'Send code');
+  mail = email.value.trim().toLowerCase();
+  const r = await api('/auth/forgot/request', {email: mail});
+  busy(btn, false, 'Send code');
+  if (!r.ok) return show(r.message || 'Request failed');
+  s1.classList.add('hidden'); s2.classList.remove('hidden'); show(r.message, true); otp.focus();
+};
+b.onsubmit = async e => {
+  e.preventDefault(); const btn = b.querySelector('button'); busy(btn, true, 'Update password');
+  const r = await api('/auth/forgot/reset', {email: mail, otp: otp.value.trim(), password: pw.value});
+  busy(btn, false, 'Update password');
+  if (!r.ok) return show(r.message || 'Reset failed');
+  show('Password updated. Redirecting…', true); setTimeout(() => location.href = '/login', 900);
+};
+</script>
+{% endblock %}

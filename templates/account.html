@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}My account{% endblock %}
+{% block width %}max-w-lg{% endblock %}
+{% block body %}
+<div class="flex flex-col items-center">
+  {% if photo %}<img src="{{ photo }}" class="w-24 h-24 rounded-full object-cover shadow border-4 border-slate-100" alt="">
+  {% else %}<div class="w-24 h-24 rounded-full bg-blue-600 text-white text-3xl font-bold flex items-center justify-center">{{ user.full_name[:1]|upper }}</div>{% endif %}
+  <h1 class="text-2xl font-bold text-slate-800 mt-4">{{ user.full_name }}</h1>
+  <p class="text-slate-500">{{ user.email }}</p>
+</div>
+<dl class="mt-6 space-y-3 border-t pt-6 text-sm">
+  <div class="flex justify-between"><dt class="text-slate-400">User ID</dt><dd class="text-blue-600 font-bold">{{ user.user_id }}</dd></div>
+  <div class="flex justify-between"><dt class="text-slate-400">Gender</dt><dd class="font-semibold">{{ user.gender or '—' }}</dd></div>
+  <div class="flex justify-between"><dt class="text-slate-400">Phone</dt><dd class="font-semibold">{{ user.phone_number or '—' }}</dd></div>
+  <div class="flex justify-between"><dt class="text-slate-400">Date of birth</dt><dd class="font-semibold">{{ user.date_of_birth or '—' }}</dd></div>
+  <div class="flex justify-between"><dt class="text-slate-400">Joined</dt><dd class="font-semibold">{{ user.created_at }}</dd></div>
+</dl>
+
+<h2 class="font-bold text-slate-800 mt-8 mb-3">Connected apps</h2>
+{% if apps %}
+<ul class="space-y-2">
+  {% for consent, client in apps %}
+  <li class="flex items-center justify-between bg-slate-50 rounded-lg px-4 py-3">
+    <div><p class="font-semibold text-sm">{{ client.client_name }}</p><p class="text-xs text-slate-400">{{ consent.scope }}</p></div>
+    <form method="post" action="/auth/consents/{{ consent.id }}/revoke">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="text-sm text-red-600 hover:underline">Revoke</button></form>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}<p class="text-sm text-slate-400">No apps connected yet.</p>{% endif %}
+
+<div class="mt-8 flex gap-3">
+  <a href="/developer" class="btn-alt text-center">Developer portal</a>
+  <form method="post" action="/auth/logout" class="w-full">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn-alt hover:!bg-red-50 hover:!text-red-600">Log out</button></form>
+</div>
+{% endblock %}

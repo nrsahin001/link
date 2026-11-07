@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Developer portal{% endblock %}
+{% block width %}max-w-3xl{% endblock %}
+{% block body %}
+<div class="flex items-center justify-between mb-2">
+  <h1 class="text-2xl font-bold text-slate-800">Developer portal</h1>
+  <a href="/account" class="text-sm text-blue-600 hover:underline">← My account</a>
+</div>
+<p class="text-slate-500 text-sm mb-6">Register your app to offer “Sign in with this account”. Discovery URL:
+  <code class="bg-slate-100 px-1 rounded">{{ issuer }}/.well-known/openid-configuration</code></p>
+
+{% for e in errors %}<p class="bg-red-50 text-red-700 text-sm rounded-lg px-4 py-2 mb-2">{{ e }}</p>{% endfor %}
+
+{% if new_client %}
+<div class="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 text-sm space-y-1" id="new-credentials"
+     data-client-id="{{ new_client.client_id }}"{% if new_secret %} data-secret="{{ new_secret }}"{% endif %}>
+  <p class="font-bold text-green-800">{{ new_client.client_name }}</p>
+  <p>Client ID: <code class="break-all">{{ new_client.client_id }}</code></p>
+  {% if new_secret %}
+  <p>Client secret: <code class="break-all">{{ new_secret }}</code></p>
+  <p class="text-green-700">Copy the secret now — it is stored hashed and can never be shown again.</p>
+  {% else %}<p class="text-green-700">Public client: no secret. PKCE (S256) is required.</p>{% endif %}
+</div>
+{% endif %}
+
+<form method="post" action="/developer/clients" class="grid gap-3 bg-slate-50 rounded-xl p-4 mb-8">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <h2 class="font-bold text-slate-800">Register a new app</h2>
+  <input class="inp" name="name" placeholder="App name" maxlength="80" required>
+  <textarea class="inp" name="redirect_uris" rows="3" placeholder="Redirect URIs, one per line&#10;https://myapp.com/callback" required></textarea>
+  <select class="inp" name="type">
+    <option value="confidential">Confidential (server-side app, has a client secret)</option>
+    <option value="public">Public (SPA / mobile app, PKCE only)</option></select>
+  <div class="flex flex-wrap gap-4 text-sm">
+    {% for key, label in scopes.items() %}{% if key != 'openid' %}
+    <label class="flex items-center gap-1"><input type="checkbox" name="scopes" value="{{ key }}" {% if key in ('profile','email') %}checked{% endif %}> {{ key }}</label>
+    {% endif %}{% endfor %}
+  </div>
+  <button class="btn">Create app</button>
+</form>
+
+<h2 class="font-bold text-slate-800 mb-3">Your apps</h2>
+{% for c in clients %}
+<div class="border rounded-xl p-4 mb-3 text-sm">
+  <div class="flex justify-between items-start">
+    <div><p class="font-bold">{{ c.client_name }}
+      {% if c.is_first_party %}<span class="text-xs bg-blue-100 text-blue-700 rounded px-1">first-party</span>{% endif %}</p>
+      <p class="text-slate-500 break-all">ID: {{ c.client_id }}</p>
+      <p class="text-slate-500">{{ 'Public' if c.token_endpoint_auth_method == 'none' else 'Confidential' }} · scopes: {{ c.scope }}</p>
+      {% for u in c.redirect_uris %}<p class="text-slate-400 break-all">↪ {{ u }}</p>{% endfor %}</div>
+    <div class="flex gap-3 shrink-0">
+      {% if c.token_endpoint_auth_method != 'none' %}
+      <form method="post" action="/developer/clients/{{ c.id }}/rotate"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="text-blue-600 hover:underline">New secret</button></form>{% endif %}
+      <form method="post" action="/developer/clients/{{ c.id }}/delete" onsubmit="return confirm('Delete this app? All its users will be signed out.')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="text-red-600 hover:underline">Delete</button></form>
+    </div>
+  </div>
+</div>
+{% else %}<p class="text-sm text-slate-400">No apps registered yet.</p>{% endfor %}
+{% endblock %}

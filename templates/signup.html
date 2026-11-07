@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Create account{% endblock %}
+{% block body %}
+<div id="step1">
+  <h1 class="text-3xl font-extrabold text-slate-800 mb-2">Create account</h1>
+  <p class="text-slate-500 mb-6">One account for every connected app.</p>
+  <form id="f" class="space-y-4">
+    <div class="flex flex-col items-center mb-2">
+      <img id="preview" class="w-24 h-24 rounded-full object-cover border-4 border-slate-100 shadow bg-slate-200 cursor-pointer"
+           alt="Profile photo" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><circle cx='12' cy='8' r='4'/><path d='M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z'/></svg>"
+           onclick="photoIn.click()">
+      <input type="file" id="photoIn" accept="image/*" class="hidden">
+      <p class="text-xs text-slate-400 mt-2">Click to add a photo (optional)</p>
+    </div>
+    <div class="relative"><span class="absolute left-4 top-3 text-slate-400 font-bold">#</span>
+      <input class="inp pl-8" id="user_id" placeholder="user id (max 8 letters/digits)" maxlength="8" required
+             oninput="this.value=this.value.replace(/[^A-Za-z0-9]/g,'')"></div>
+    <input class="inp" id="fullName" placeholder="Full name" maxlength="100" required>
+    <input class="inp" type="date" id="dob" required>
+    <select class="inp" id="gender" required>
+      <option value="">Select gender</option><option value="male">Male</option>
+      <option value="female">Female</option><option value="other">Other</option></select>
+    <input class="inp" type="tel" id="phone" placeholder="Phone number (10 digits, optional)" inputmode="numeric" maxlength="10"
+           oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+    <input class="inp" type="email" id="email" placeholder="Email address" autocomplete="email" required>
+    <input class="inp" type="password" id="password" placeholder="Password (min 8 characters)" minlength="8" autocomplete="new-password" required>
+    <input class="inp" type="password" id="confirmPw" placeholder="Confirm password" minlength="8" autocomplete="new-password" required>
+    <button class="btn" type="submit">Continue</button>
+  </form>
+  <p class="mt-4 text-center text-sm text-slate-600">Already have an account?
+    <a class="text-blue-600 font-semibold" href="/login{% if next %}?next={{ next|urlencode }}{% endif %}">Sign in</a></p>
+</div>
+
+<div id="step2" class="hidden">
+  <h1 class="text-3xl font-extrabold text-slate-800 mb-2 text-center">Verify email</h1>
+  <p class="text-slate-500 mb-6 text-center">Enter the 6-digit code we emailed you.</p>
+  <form id="v" class="space-y-4">
+    <input class="inp text-center text-2xl tracking-[0.5em] font-bold" id="otp" maxlength="6" inputmode="numeric"
+           autocomplete="one-time-code" placeholder="••••••" required>
+    <button class="btn" type="submit">Verify &amp; register</button>
+    <button class="btn-alt" type="button" id="resend">Resend code</button>
+  </form>
+</div>
+<p id="msg"></p>
+{% endblock %}
+{% block scripts %}
+<script>
+const NEXT = {{ next|tojson }};
+let photo = null, mail = '';
+const max = new Date(); max.setFullYear(max.getFullYear() - 18);
+dob.max = max.toISOString().slice(0, 10);
+
+photoIn.onchange = e => {
+  const f = e.target.files[0]; if (!f || !f.type.startsWith('image/')) return;
+  const img = new Image(), url = URL.createObjectURL(f);
+  img.onload = () => {                        // centre-crop to a 256px square JPEG
+    const s = Math.min(img.width, img.height), c = document.createElement('canvas');
+    c.width = c.height = 256;
+    c.getContext('2d').drawImage(img, (img.width-s)/2, (img.height-s)/2, s, s, 0, 0, 256, 256);
+    photo = c.toDataURL('image/jpeg', 0.85); preview.src = photo; URL.revokeObjectURL(url);
+  };
+  img.src = url;
+};
+
+f.onsubmit = async e => {
+  e.preventDefault();
+  if (password.value !== confirmPw.value) return show('Passwords do not match');
+  const b = f.querySelector('button'); busy(b, true, 'Continue');
+  mail = email.value.trim().toLowerCase();
+  const r = await api('/auth/signup', {user_id: user_id.value, fullName: fullName.value, age: dob.value,
+    gender: gender.value, phone: phone.value, email: mail, password: password.value, photo});
+  busy(b, false, 'Continue');
+  if (!r.ok) return show(r.message || 'Signup failed');
+  step1.classList.add('hidden'); step2.classList.remove('hidden'); show('', true); otp.focus();
+};
+
+v.onsubmit = async e => {
+  e.preventDefault();
+  const b = v.querySelector('button[type=submit]'); busy(b, true, 'Verify & register');
+  const r = await api('/auth/signup/verify', {email: mail, otp: otp.value.trim()});
+  busy(b, false, 'Verify & register');
+  if (!r.ok) return show(r.message || 'Verification failed');
+  show('Account created! Redirecting…', true);
+  setTimeout(() => location.href = '/login' + (NEXT ? '?next=' + encodeURIComponent(NEXT) : ''), 800);
+};
+
+resend.onclick = async () => {
+  resend.disabled = true; setTimeout(() => resend.disabled = false, 60000);
+  const r = await api('/auth/signup/resend', {email: mail});
+  show(r.message || 'Request failed', r.ok);
+};
+</script>
+{% endblock %}

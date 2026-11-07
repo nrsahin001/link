@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Authorize {{ client.client_name }}{% endblock %}
+{% block body %}
+<h1 class="text-2xl font-bold text-slate-800 mb-1">Authorize <span class="text-blue-600">{{ client.client_name }}</span></h1>
+<p class="text-slate-500 mb-6 text-sm">Signed in as {{ user.email }}. This app wants to:</p>
+<ul class="space-y-2 mb-6">
+  {% for key, label in scopes %}
+  <li class="flex items-start gap-2 text-slate-700 text-sm"><span class="text-green-600 font-bold">✓</span>{{ label }}</li>
+  {% endfor %}
+</ul>
+<form method="post" action="{{ request.full_path.rstrip('?') }}" class="space-y-3">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button class="btn" name="action" value="allow">Allow</button>
+  <button class="btn-alt" name="action" value="deny">Deny</button>
+</form>
+<p class="text-xs text-slate-400 mt-4 text-center">You will be sent back to {{ client.redirect_uris[0].split('/')[2] if client.redirect_uris[0].startswith('http') else 'the app' }}.
+Your password is never shared with the app.</p>
+{% endblock %}

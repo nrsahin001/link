@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block body %}
+<h1 class="text-3xl font-extrabold text-slate-800 text-center mb-2">Welcome back</h1>
+<p class="text-slate-500 text-center mb-8">Sign in to continue.</p>
+<form id="f" class="space-y-4">
+  <input class="inp" type="email" id="email" placeholder="Email address" autocomplete="email" required>
+  <input class="inp" type="password" id="password" placeholder="Password" autocomplete="current-password" required>
+  <div class="text-right"><a href="/forgot" class="text-sm text-blue-600 hover:underline">Forgot password?</a></div>
+  <button class="btn" type="submit">Sign in</button>
+</form>
+<p id="msg"></p>
+<p class="mt-6 text-center text-sm text-slate-600">New here?
+  <a class="text-blue-600 font-semibold" href="/signup{% if next %}?next={{ next|urlencode }}{% endif %}">Create an account</a></p>
+{% endblock %}
+{% block scripts %}
+<script>
+const NEXT = {{ next|tojson }};
+document.getElementById('f').onsubmit = async e => {
+  e.preventDefault();
+  const b = e.target.querySelector('button');
+  busy(b, true, 'Sign in');
+  const r = await api('/auth/login', {email: email.value, password: password.value, next: NEXT});
+  if (r.ok) { location.href = r.redirect; return; }
+  busy(b, false, 'Sign in'); show(r.message || 'Sign in failed');
+};
+</script>
+{% endblock %}
